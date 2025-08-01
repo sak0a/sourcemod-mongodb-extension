@@ -1,0 +1,9 @@
+mongodb-api-service/node_modules/
+
+mongodb-api-service/.env
+mongodb-api-service/logs/
+mongodb-api-service/dist/
+http_extension/bin/
+http_extension/build/
+http_extension/build_minimal/
+mongodb-api-service/dist/.env

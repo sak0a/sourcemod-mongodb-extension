@@ -1,0 +1,92 @@
+cmake_minimum_required(VERSION 3.10)
+project(http_mongodb_minimal)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Compiler flags for 32-bit
+if(WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
+    add_definitions(-DWIN32 -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE -DSOURCEMOD_BUILD)
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -m32")
+    add_definitions(-DSOURCEMOD_BUILD -DPOSIX -Dstricmp=strcasecmp -D_stricmp=strcasecmp -D_strnicmp=strncasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf -D_vsnprintf=vsnprintf -D_alloca=alloca -Dstrcmpi=strcasecmp)
+endif()
+
+# Include directories (absolute paths)
+include_directories(
+    /root/sourcemod-workspace/sourcemod/public
+    /root/sourcemod-workspace/sourcemod/public/extensions
+    /root/sourcemod-workspace/sourcemod/public/sourcepawn
+    /root/sourcemod-workspace/sourcemod/public/amtl
+    /root/sourcemod-workspace/sourcemod/public/amtl/amtl
+    /root/sourcemod-workspace/sourcemod/sourcepawn/include
+    /root/sourcemod-workspace/hl2sdk-tf2/public
+    /root/sourcemod-workspace/hl2sdk-tf2/public/engine
+    /root/sourcemod-workspace/hl2sdk-tf2/public/mathlib
+    /root/sourcemod-workspace/hl2sdk-tf2/public/vstdlib
+    /root/sourcemod-workspace/hl2sdk-tf2/public/tier0
+    /root/sourcemod-workspace/hl2sdk-tf2/public/tier1
+    /root/sourcemod-workspace/hl2sdk-tf2/game/shared
+    /root/sourcemod-workspace/hl2sdk-tf2/game/server
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Source files - minimal version without libcurl
+set(SOURCES
+    ../minimal_complete_extension.cpp
+    /root/sourcemod-workspace/sourcemod/public/smsdk_ext.cpp
+)
+
+# Header files
+set(HEADERS
+    ../extension.h
+    ../smsdk_config.h
+)
+
+# Create the extension library
+add_library(http_mongodb_minimal SHARED ${SOURCES} ${HEADERS})
+
+# Platform-specific linking - NO libcurl
+if(WIN32)
+    target_link_libraries(http_mongodb_minimal
+        ${HL2SDK_PATH}/lib/public/tier0.lib
+        ${HL2SDK_PATH}/lib/public/tier1.lib
+        ${HL2SDK_PATH}/lib/public/vstdlib.lib
+        ws2_32
+        winmm
+    )
+    set_target_properties(http_mongodb_minimal PROPERTIES
+        OUTPUT_NAME "http_mongodb_minimal.ext"
+        SUFFIX ".dll"
+    )
+else()
+    # Only essential libraries, no libcurl
+    target_link_libraries(http_mongodb_minimal
+        /root/sourcemod-workspace/hl2sdk-tf2/lib/linux/tier1_i486.a
+        /root/sourcemod-workspace/hl2sdk-tf2/lib/linux/mathlib_i486.a
+        dl
+    )
+    set_target_properties(http_mongodb_minimal PROPERTIES
+        OUTPUT_NAME "http_mongodb_minimal.ext"
+        SUFFIX ".so"
+        COMPILE_FLAGS "-m32"
+        LINK_FLAGS "-m32"
+    )
+endif()
+
+# Set output directory
+set_target_properties(http_mongodb_minimal PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+# Copy built extension to main bin directory as standard name
+add_custom_command(TARGET http_mongodb_minimal POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/bin/libhttp_mongodb_minimal.ext.so
+        ${CMAKE_SOURCE_DIR}/../bin/http_mongodb.ext.so
+    COMMENT "Copying minimal extension to main bin directory as http_mongodb.ext.so"
+)
