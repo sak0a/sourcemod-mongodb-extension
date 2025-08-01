@@ -57,6 +57,97 @@ mongodb-api-service/
 └── package.json                     # Dependencies
 ```
 
+## 🏗️ **Architecture & Configuration**
+
+### **🔄 System Architecture**
+
+```
+┌─────────────────┐    HTTP API     ┌─────────────────┐    MongoDB     ┌─────────────────┐
+│   SourceMod     │    Calls        │   Node.js API   │   Protocol     │   MongoDB       │
+│   Extension     │◄───────────────►│   Service       │◄──────────────►│   Server        │
+│   (32-bit)      │                 │   (64-bit)      │                │                 │
+└─────────────────┘                 └─────────────────┘                └─────────────────┘
+│                                   │                                  │
+│ • SourcePawn plugins              │ • HTTP endpoints                 │ • Document storage
+│ • Native functions                │ • MongoDB driver                 │ • Authentication
+│ • Configuration                   │ • JSON processing                │ • Replication
+│ • Error handling                  │ • Connection pooling             │ • Indexing
+└─────────────────                  └─────────────────                 └─────────────────
+```
+
+### **📋 Configuration Architecture**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              Configuration Layers                                  │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  SourceMod Extension Config          API Service Config           MongoDB Server   │
+│  ┌─────────────────────┐             ┌─────────────────────┐      ┌─────────────┐  │
+│  │   mongodb.cfg       │             │  .env.production    │      │   MongoDB   │  │
+│  │                     │             │                     │      │   Instance  │  │
+│  │ • API service URL   │────────────►│ • MongoDB URI       │─────►│             │  │
+│  │ • Timeouts          │             │ • Connection pool   │      │ • Users     │  │
+│  │ • Default DB names  │             │ • Authentication    │      │ • Databases │  │
+│  │ • Retry settings    │             │ • SSL settings      │      │ • Collections│ │
+│  └─────────────────────┘             └─────────────────────┘      └─────────────┘  │
+│                                                                                     │
+│  ⚠️  Extension NEVER connects directly to MongoDB                                  │
+│  ✅  Extension ONLY talks to API service via HTTP                                  │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### **🔧 Configuration Breakdown**
+
+#### **SourceMod Extension Config (`configs/mongodb.cfg`)**
+```javascript
+"api_service" {
+    "url"     "http://127.0.0.1:3300"  // WHERE to find API service
+    "timeout" "30000"                   // How long to wait for responses
+    "retries" "3"                       // How many times to retry
+}
+
+"database" {
+    "name"               "gamedb"       // DEFAULT database name
+    "players_collection" "players"      // DEFAULT collection names
+}
+```
+**Purpose**: Tells extension HOW to communicate with API service
+
+#### **API Service Config (`.env.production`)**
+```bash
+# MongoDB connection (ONLY configured here)
+MONGODB_URI=mongodb://admin:password@37.114.54.74:27017/?authSource=admin
+
+# API service settings
+PORT=3300
+HOST=0.0.0.0
+```
+**Purpose**: Tells API service HOW to connect to MongoDB
+
+### **⚡ Data Flow Example**
+
+```
+1. SourcePawn Plugin Call:
+   MongoConnection conn = new MongoConnection();
+   conn.InsertOneJSON("{\"player\":\"John\",\"score\":100}");
+
+2. Extension Processing:
+   ┌─ Reads mongodb.cfg for API service URL
+   ├─ Constructs HTTP request to http://127.0.0.1:3300/api/v1/...
+   └─ Sends JSON data via HTTP POST
+
+3. API Service Processing:
+   ┌─ Receives HTTP request
+   ├─ Reads .env.production for MongoDB URI
+   ├─ Connects to MongoDB using mongodb://admin:password@...
+   └─ Executes MongoDB operation
+
+4. Response Chain:
+   MongoDB → API Service → HTTP Response → Extension → SourcePawn
+```
+
 ## 🚀 **Production Setup Guide**
 
 ### **📋 Prerequisites**
@@ -196,6 +287,102 @@ curl -X POST http://YOUR_API_SERVER_IP:3300/api/v1/connections \
   -H "Content-Type: application/json" \
   -d '{"uri":"your-mongodb-uri"}'
 ```
+
+## 🔄 **Development Workflow**
+
+### **📝 Typical Development Workflow**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                            Development Workflow                                    │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  1. Setup API Service           2. Configure MongoDB        3. Build Extension     │
+│  ┌─────────────────────┐       ┌─────────────────────┐     ┌─────────────────────┐ │
+│  │ cd mongodb-api-     │       │ Edit .env.development│     │ cd http_extension   │ │
+│  │   service           │       │                     │     │                     │ │
+│  │ ./setup-mongodb-    │──────►│ MONGODB_URI=        │────►│ ./build_extension.sh│ │
+│  │   config.sh         │       │   mongodb://...     │     │   minimal           │ │
+│  │ npm run dev         │       │ PORT=3300           │     │                     │ │
+│  └─────────────────────┘       └─────────────────────┘     └─────────────────────┘ │
+│           │                              │                              │           │
+│           ▼                              ▼                              ▼           │
+│  4. Install Extension          5. Configure Extension      6. Test & Debug        │
+│  ┌─────────────────────┐       ┌─────────────────────┐     ┌─────────────────────┐ │
+│  │ Copy .ext.so to     │       │ Edit mongodb.cfg    │     │ sm exts load        │ │
+│  │   /sourcemod/       │       │                     │     │   http_mongodb      │ │
+│  │   extensions/       │──────►│ "url" "http://      │────►│ mongo_test          │ │
+│  │                     │       │   127.0.0.1:3300"  │     │ Check logs          │ │
+│  │                     │       │                     │     │                     │ │
+│  └─────────────────────┘       └─────────────────────┘     └─────────────────────┘ │
+│                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### **🔧 Configuration Workflow**
+
+#### **Development Environment:**
+```bash
+# 1. API Service (Local MongoDB)
+cd mongodb-api-service
+echo "MONGODB_URI=mongodb://localhost:27017/gamedb_dev" > .env.development
+echo "PORT=3300" >> .env.development
+npm run dev
+
+# 2. Extension Config (Point to local API)
+# Edit configs/mongodb.cfg:
+"api_service" { "url" "http://127.0.0.1:3300" }
+
+# 3. Test
+mongo_test
+```
+
+#### **Production Environment:**
+```bash
+# 1. API Service (Remote MongoDB with auth)
+cd mongodb-api-service
+echo "MONGODB_URI=mongodb://admin:password@prod-server:27017/?authSource=admin" > .env.production
+echo "PORT=3300" >> .env.production
+./start-production.sh
+
+# 2. Extension Config (Point to production API)
+# Edit configs/mongodb.cfg:
+"api_service" { "url" "http://prod-api-server:3300" }
+
+# 3. Deploy and test
+mongo_test
+```
+
+### **🐛 Debug Workflow**
+
+```
+Issue: Extension won't connect
+│
+├─ 1. Check API Service
+│  ├─ curl http://api-server:3300/health
+│  ├─ Check API service logs
+│  └─ Verify MongoDB connection
+│
+├─ 2. Check Extension Config
+│  ├─ Verify URL in mongodb.cfg
+│  ├─ Check SourceMod logs
+│  └─ Test extension loading
+│
+└─ 3. Test Network
+   ├─ telnet api-server 3300
+   ├─ Check firewall rules
+   └─ Verify port forwarding
+```
+
+### **📊 Common Configuration Scenarios**
+
+| Scenario | API Service Location | Extension Config | MongoDB Location |
+|----------|---------------------|------------------|------------------|
+| **Local Dev** | `127.0.0.1:3300` | `http://127.0.0.1:3300` | `localhost:27017` |
+| **Same Server** | `0.0.0.0:3300` | `http://127.0.0.1:3300` | `localhost:27017` |
+| **Separate API Server** | `0.0.0.0:3300` | `http://192.168.1.100:3300` | `remote-mongo:27017` |
+| **Container** | `0.0.0.0:3300` | `http://host-ip:3300` | `mongo-container:27017` |
+| **Cloud** | `0.0.0.0:3300` | `http://api.domain.com:3300` | `cluster.mongodb.net` |
 
 ---
 
@@ -563,6 +750,30 @@ mongo_test
 - **Host networking**: Use host IP instead of localhost
 - **Port mapping**: Ensure port 3300 is properly mapped
 - **Minimal extension**: Use minimal build to avoid dependency issues
+
+### **🔍 Debug Data Flow**
+
+```
+SourcePawn Plugin → Extension → API Service → MongoDB
+      │                │            │            │
+      ▼                ▼            ▼            ▼
+   1. mongo_test    2. HTTP POST   3. MongoDB   4. Response
+   ┌─────────────┐  ┌─────────────┐ ┌──────────┐ ┌─────────────┐
+   │ Plugin Call │─►│ Extension   │►│ API      │►│ MongoDB     │
+   │             │  │ Config:     │ │ Config:  │ │ Server      │
+   │ MongoConn   │  │ mongodb.cfg │ │ .env     │ │             │
+   │ .Insert()   │  │             │ │          │ │ Collection  │
+   └─────────────┘  └─────────────┘ └──────────┘ └─────────────┘
+                           │            │            │
+                           ▼            ▼            ▼
+                    Check URL here  Check URI here  Check auth
+
+   Debug Points:
+   ✓ 1. Extension loaded?     → sm exts list | grep mongodb
+   ✓ 2. API service running?  → curl http://api:3300/health
+   ✓ 3. MongoDB accessible?   → mongo mongodb://uri
+   ✓ 4. Network connectivity? → telnet api-server 3300
+```
 
 ### **Debug Commands**
 ```bash
