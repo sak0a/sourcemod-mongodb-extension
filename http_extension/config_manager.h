@@ -21,6 +21,7 @@ public:
     
     // Get configuration values
     std::string GetAPIServiceURL() const { return m_apiServiceURL; }
+    std::string GetAPIKey() const { return m_apiKey; }
     int GetTimeout() const { return m_timeout; }
     int GetRetries() const { return m_retries; }
     bool IsDebugEnabled() const { return m_debug; }
@@ -34,6 +35,7 @@ public:
     
     // Set configuration values (for runtime changes)
     void SetAPIServiceURL(const std::string& url) { m_apiServiceURL = url; }
+    void SetAPIKey(const std::string& key) { m_apiKey = key; }
     void SetTimeout(int timeout) { m_timeout = timeout; }
     void SetRetries(int retries) { m_retries = retries; }
     void SetDebug(bool debug) { m_debug = debug; }
@@ -44,6 +46,7 @@ public:
 private:
     // Configuration values
     std::string m_apiServiceURL;
+    std::string m_apiKey;
     int m_timeout;
     int m_retries;
     bool m_debug;

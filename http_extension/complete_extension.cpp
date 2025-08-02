@@ -4,6 +4,7 @@
  */
 
 #include "smsdk_ext.h"
+#include "config_manager.h"
 #include <curl/curl.h>
 #include <string>
 #include <map>
@@ -35,6 +36,9 @@ Handle_t g_nextHandle = 1;
 std::string g_apiUrl = "http://127.0.0.1:3300"; // Default API URL
 int g_requestTimeout = 30; // Default timeout in seconds
 std::string g_apiKey = "sourcemod-mongodb-extension-2024"; // Default API key
+
+// Global configuration manager
+ConfigManager g_configManager;
 
 // HTTP helper function
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* response) {
@@ -362,11 +366,27 @@ cell_t MongoDB_LoadConfig(IPluginContext *pContext, const cell_t *params) {
 
     g_pSM->LogMessage(myself, "MongoDB_LoadConfig: Loading config from %s", configPath);
 
-    // For now, we'll use default values and log that config loading is not fully implemented
-    // In a full implementation, this would parse a KeyValues file
-    g_pSM->LogMessage(myself, "MongoDB_LoadConfig: Using default configuration");
+    // Use the ConfigManager to load the configuration
+    if (g_configManager.LoadConfig(configPath)) {
+        // Update global variables with loaded configuration
+        g_apiUrl = g_configManager.GetAPIServiceURL();
+        g_requestTimeout = g_configManager.GetTimeout() / 1000; // Convert ms to seconds
+        g_apiKey = g_configManager.GetAPIKey();
 
-    return 1; // Success
+        g_pSM->LogMessage(myself, "MongoDB_LoadConfig: Configuration loaded successfully");
+        g_pSM->LogMessage(myself, "  API URL: %s", g_apiUrl.c_str());
+        g_pSM->LogMessage(myself, "  API Key: %s", g_apiKey.c_str());
+        g_pSM->LogMessage(myself, "  Timeout: %d seconds", g_requestTimeout);
+        g_pSM->LogMessage(myself, "  Default DB: %s", g_configManager.GetDefaultDatabase().c_str());
+        g_pSM->LogMessage(myself, "  Debug Mode: %s", g_configManager.IsDebugEnabled() ? "enabled" : "disabled");
+
+        return 1; // Success
+    } else {
+        g_pSM->LogMessage(myself, "MongoDB_LoadConfig: Failed to load config: %s",
+                         g_configManager.GetLastError().c_str());
+        g_pSM->LogMessage(myself, "MongoDB_LoadConfig: Using default configuration");
+        return 0; // Failed
+    }
 }
 
 // MongoDB_SetAPIURL - Set the API service URL
@@ -375,6 +395,7 @@ cell_t MongoDB_SetAPIURL(IPluginContext *pContext, const cell_t *params) {
     pContext->LocalToString(params[1], &url);
 
     g_apiUrl = std::string(url);
+    g_configManager.SetAPIServiceURL(g_apiUrl);
     g_pSM->LogMessage(myself, "MongoDB_SetAPIURL: Set API URL to %s", url);
 
     return 1; // Success
@@ -386,7 +407,8 @@ cell_t MongoDB_GetAPIURL(IPluginContext *pContext, const cell_t *params) {
     pContext->LocalToString(params[1], &buffer);
     int maxlen = params[2];
 
-    strncpy(buffer, g_apiUrl.c_str(), maxlen - 1);
+    std::string currentUrl = g_configManager.GetAPIServiceURL();
+    strncpy(buffer, currentUrl.c_str(), maxlen - 1);
     buffer[maxlen - 1] = '\0';
 
     return 1; // Success
@@ -398,6 +420,7 @@ cell_t MongoDB_SetTimeout(IPluginContext *pContext, const cell_t *params) {
 
     if (timeout > 0 && timeout <= 300) { // Max 5 minutes
         g_requestTimeout = timeout;
+        g_configManager.SetTimeout(timeout * 1000); // Convert to milliseconds for ConfigManager
         g_pSM->LogMessage(myself, "MongoDB_SetTimeout: Set timeout to %d seconds", timeout);
         return 1;
     }
@@ -408,7 +431,7 @@ cell_t MongoDB_SetTimeout(IPluginContext *pContext, const cell_t *params) {
 
 // MongoDB_GetTimeout - Get current request timeout
 cell_t MongoDB_GetTimeout(IPluginContext *pContext, const cell_t *params) {
-    return g_requestTimeout;
+    return g_configManager.GetTimeout() / 1000; // Convert from milliseconds to seconds
 }
 
 // MongoDB_Connect - Creates a connection handle

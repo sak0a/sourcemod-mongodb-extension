@@ -9,13 +9,14 @@
 
 ConfigManager::ConfigManager()
     : m_apiServiceURL("http://127.0.0.1:3300")
+    , m_apiKey("sourcemod-mongodb-extension-2024")
     , m_timeout(30000)
     , m_retries(3)
     , m_debug(false)
-    , m_defaultDatabase("gamedb")
+    , m_defaultDatabase("sourcemod")
     , m_playersCollection("players")
-    , m_connectionsCollection("connections")
-    , m_maxConnections(10)
+    , m_connectionsCollection("servers")
+    , m_maxConnections(5)
     , m_idleTimeout(300)
 {
 }
@@ -43,32 +44,40 @@ bool ConfigManager::LoadConfig(const char* configPath)
     }
     
     // Load API service settings
-    IKeyValues* apiService = kv->FindKey("api_service");
+    IKeyValues* apiService = kv->FindKey("api");
     if (apiService)
     {
         m_apiServiceURL = GetStringValue(apiService, "url", "http://127.0.0.1:3300");
-        m_timeout = GetIntValue(apiService, "timeout", 30000);
-        m_retries = GetIntValue(apiService, "retries", 3);
-        m_debug = GetBoolValue(apiService, "debug", false);
+        m_apiKey = GetStringValue(apiService, "api_key", "sourcemod-mongodb-extension-2024");
+        m_timeout = GetIntValue(apiService, "timeout", 30) * 1000; // Convert seconds to milliseconds
+        m_retries = GetIntValue(apiService, "max_retries", 3);
+        m_debug = GetBoolValue(apiService, "debug_mode", false);
     }
-    
+
     // Load database settings
     IKeyValues* database = kv->FindKey("database");
     if (database)
     {
-        m_defaultDatabase = GetStringValue(database, "name", "gamedb");
+        m_defaultDatabase = GetStringValue(database, "default_db", "sourcemod");
         m_playersCollection = GetStringValue(database, "players_collection", "players");
-        m_connectionsCollection = GetStringValue(database, "connections_collection", "connections");
+        m_connectionsCollection = GetStringValue(database, "servers_collection", "servers");
     }
-    
+
     // Load connection pool settings
-    IKeyValues* pool = kv->FindKey("connection_pool");
-    if (pool)
+    IKeyValues* connections = kv->FindKey("connections");
+    if (connections)
     {
-        m_maxConnections = GetIntValue(pool, "max_connections", 10);
-        m_idleTimeout = GetIntValue(pool, "idle_timeout", 300);
+        m_maxConnections = GetIntValue(connections, "pool_size", 5);
+        m_idleTimeout = GetIntValue(connections, "keep_alive", 300);
     }
-    
+
+    // Load development settings (for debug mode)
+    IKeyValues* development = kv->FindKey("development");
+    if (development)
+    {
+        m_debug = GetBoolValue(development, "debug_mode", false);
+    }
+
     kv->deleteThis();
     return true;
 }
