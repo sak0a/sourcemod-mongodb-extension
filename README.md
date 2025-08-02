@@ -62,7 +62,7 @@ http_extension/
 ├── CMakeLists_minimal.txt           # Minimal build config
 ├── CMakeLists.txt                   # Full build config
 ├── configs/
-│   └── mongodb_config_example.cfg   # Comprehensive configuration example
+│   └── mongodb.cfg                  # MongoDB configuration file
 └── scripting/
     ├── include/http_mongodb.inc     # SourcePawn interface (847 lines)
     ├── mongo_console_test.sp        # Console test commands
@@ -93,7 +93,7 @@ mongodb-api-service/
 ├── dist/                            # Compiled JavaScript
 ├── package.json                     # Dependencies
 ├── .env                             # Production configuration
-├── .env.security                    # Security configuration template
+├── .env.example                     # Configuration template
 ├── test_comprehensive_api.sh        # Complete API testing (29 tests)
 ├── test_security.sh                 # Security testing suite
 └── SECURITY_FEATURES_GUIDE.md       # Comprehensive security documentation
@@ -161,7 +161,7 @@ mongodb-api-service/
 #### **API Service Config (`.env.production`)**
 ```bash
 # MongoDB connection (ONLY configured here)
-MONGODB_URI=mongodb://admin:password@37.114.54.74:27017/?authSource=admin
+MONGODB_URI=mongodb://admin:password@192.168.1.100:27017/?authSource=admin
 
 # API service settings
 PORT=3300
@@ -221,11 +221,11 @@ npm install --production
 ./setup-mongodb-config.sh
 
 # Or manually copy and edit
-cp .env.example .env.production
-nano .env.production
+cp .env.example .env
+nano .env
 ```
 
-**Configure your MongoDB URI in `.env.production`:**
+**Configure your MongoDB URI in `.env`:**
 ```bash
 # For remote MongoDB server
 MONGODB_URI=mongodb://admin:your_password@your-mongodb-server:27017/?authSource=admin
@@ -437,8 +437,8 @@ Issue: Extension won't connect
 ```bash
 # Start API service locally
 cd mongodb-api-service
-cp .env.example .env.development
-# Edit .env.development with local MongoDB
+cp .env.example .env
+# Edit .env with local MongoDB
 npm run dev
 
 # Build extension
@@ -576,7 +576,7 @@ TRUST_PROXY=1                     # Set to 1 if behind reverse proxy
 ```bash
 # 1. Setup API service with security
 cd mongodb-api-service
-cp .env.security .env
+cp .env.example .env
 # Edit .env with your MongoDB credentials and security settings
 npm install && npm run build && npm start
 
@@ -590,7 +590,7 @@ cd ../http_extension
 
 # 4. Install on game server
 scp bin/http_mongodb.ext.so gameserver:/sourcemod/extensions/
-scp configs/mongodb_config_example.cfg gameserver:/sourcemod/configs/mongodb_config.cfg
+scp configs/mongodb.cfg gameserver:/sourcemod/configs/mongodb.cfg
 
 # 5. Configure and test
 # Edit mongodb.cfg with your API service URL
@@ -714,7 +714,7 @@ if (!players.InsertOneJSON(jsonDoc, insertedId, sizeof(insertedId))) {
 ## 🔧 **Configuration**
 
 ### **MongoDB Connection**
-The extension connects to: `mongodb://admin:***@37.114.54.74:27017/?authSource=admin`
+The extension connects to: `mongodb://admin:***@192.168.1.100:27017/?authSource=admin`
 
 ### **API Service**
 - **Host**: `0.0.0.0` (accessible from containers)
@@ -812,7 +812,7 @@ services:
 
 ## 📊 **Current Database**
 
-- **Server**: `37.114.54.74:27017`
+- **Server**: `192.168.1.100:27017`
 - **Database**: `gamedb`
 - **Collections**: `players`, `connections`
 - **Authentication**: Admin credentials configured
@@ -969,7 +969,7 @@ sm exts list | grep mongodb
 # Test API connectivity
 curl -X POST http://localhost:3300/api/v1/connections \
   -H "Content-Type: application/json" \
-  -d '{"uri":"mongodb://admin:***@37.114.54.74:27017/?authSource=admin"}'
+  -d '{"uri":"mongodb://admin:***@192.168.1.100:27017/?authSource=admin"}'
 
 # Monitor logs
 tail -f logs/sourcemod/errors_*.log

@@ -150,7 +150,7 @@ cell_t MongoDB_Connect(IPluginContext *pContext, const cell_t *params) {
     char *apiUrl;
     pContext->LocalToString(params[1], &apiUrl);
     
-    std::string mongoUri = "mongodb://admin:83C.!gotJK%40Z8VJmbDZMxbCk%40kyHJA.R@37.114.54.74:27017/?authSource=admin";
+    std::string mongoUri = "mongodb://admin:your-password@192.168.1.100:27017/?authSource=admin";
     std::string baseUrl = std::string(apiUrl);
     
     g_pSM->LogMessage(myself, "MongoDB_Connect: Connecting to %s", baseUrl.c_str());

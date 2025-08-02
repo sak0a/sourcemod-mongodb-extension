@@ -122,7 +122,7 @@ response=$(curl -s -w "\n%{http_code}" -X POST \
     -H "X-SourceMod-Extension: MongoDB-HTTP-Extension" \
     -H "X-Extension-Version: 1.0.0" \
     -H "User-Agent: SourceMod-MongoDB-Extension/1.0" \
-    -d '{"uri": "mongodb://admin:83C.!gotJK%40Z8VJmbDZMxbCk%40kyHJA.R@37.114.54.74:27017/?authSource=admin"}' \
+    -d '{"uri": "mongodb://admin:your-password@192.168.1.100:27017/?authSource=admin"}' \
     "$API_V1/connections")
 
 http_code=$(echo "$response" | tail -n1)

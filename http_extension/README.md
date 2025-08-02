@@ -117,7 +117,7 @@ rm -rf build_minimal/ build/
 ## 📊 **Current Configuration**
 
 ### **MongoDB Server**
-- **Host**: `37.114.54.74:27017`
+- **Host**: `192.168.1.100:27017`
 - **Database**: `gamedb`
 - **Collections**: `players`, `connections`
 - **Auth**: Admin credentials configured
@@ -312,7 +312,7 @@ curl -v http://localhost:3300/health
 # MongoDB connection test
 curl -X POST http://localhost:3300/api/v1/connections \
   -H "Content-Type: application/json" \
-  -d '{"uri":"mongodb://admin:***@37.114.54.74:27017/?authSource=admin"}'
+  -d '{"uri":"mongodb://admin:***@192.168.1.100:27017/?authSource=admin"}'
 
 # Document operations test
 curl -X POST http://localhost:3300/api/v1/connections/[ID]/databases/gamedb/collections/players/documents \

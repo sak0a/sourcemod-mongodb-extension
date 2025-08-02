@@ -63,7 +63,7 @@ public void OnPluginStart() {
 public Action Command_MongoTest(int args) {
     PrintToServer("=== MongoDB Basic Test ===");
     
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection FAILED");
@@ -107,7 +107,7 @@ public Action Command_MongoInsert(int args) {
     
     PrintToServer("=== Inserting Mock Player: %s ===", playerName);
     
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection failed");
         return Plugin_Handled;
@@ -162,7 +162,7 @@ public Action Command_MongoBatch(int args) {
     
     PrintToServer("=== Batch Insert: %d Players ===", count);
     
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection failed");
         return Plugin_Handled;
@@ -229,7 +229,7 @@ public Action Command_MongoFind(int args) {
 
     PrintToServer("=== Searching for player: %s ===", searchName);
 
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection failed");
         return Plugin_Handled;
@@ -258,7 +258,7 @@ public Action Command_MongoFind(int args) {
 public Action Command_MongoCount(int args) {
     PrintToServer("=== Document Count ===");
     
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection failed");
         return Plugin_Handled;
@@ -277,7 +277,7 @@ public Action Command_MongoCount(int args) {
 public Action Command_MongoStats(int args) {
     PrintToServer("=== MongoDB Collection Statistics ===");
     
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("❌ Connection failed");
         return Plugin_Handled;

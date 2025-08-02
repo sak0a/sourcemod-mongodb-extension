@@ -28,7 +28,7 @@ public Action Command_MongoRealTest(int client, int args) {
     PrintToChat(client, "[MongoDB] Starting real data test...");
     
     // Test connection
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     
     if (!conn.IsConnected()) {
         PrintToChat(client, "[MongoDB] Failed to connect to database");
@@ -102,7 +102,7 @@ public Action Command_MongoRealTestConsole(int args) {
     PrintToServer("[MongoDB] Starting real data test from console...");
 
     // Test connection
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
 
     if (!conn.IsConnected()) {
         PrintToServer("[MongoDB] Failed to connect to database");
@@ -160,7 +160,7 @@ public Action Command_InsertMockPlayer(int args) {
 
     PrintToServer("[MongoDB] Inserting mock player: %s", playerName);
 
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("[MongoDB] Failed to connect to database");
         return Plugin_Handled;
@@ -204,7 +204,7 @@ public Action Command_InsertMultiplePlayers(int args) {
 
     PrintToServer("[MongoDB] Inserting %d mock players...", count);
 
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) {
         PrintToServer("[MongoDB] Failed to connect to database");
         return Plugin_Handled;
@@ -273,7 +273,7 @@ public Action Command_InsertMultiplePlayers(int args) {
 public Action Command_TestConnection(int args) {
     PrintToServer("[MongoDB] Testing connection...");
 
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
 
     if (!conn.IsConnected()) {
         PrintToServer("[MongoDB] ❌ Connection FAILED");
@@ -306,7 +306,7 @@ public Action Timer_LogPlayerConnection(Handle timer, int userid) {
     if (client == 0 || !IsClientInGame(client)) return Plugin_Stop;
     
     // Connect to MongoDB
-    MongoConnection conn = new MongoConnection("http://37.114.54.74:3300");
+    MongoConnection conn = new MongoConnection("http://127.0.0.1:3300");
     if (!conn.IsConnected()) return Plugin_Stop;
     
     MongoCollection connections = conn.GetCollection("gamedb", "connections");

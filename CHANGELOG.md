@@ -91,7 +91,7 @@
 - ✅ **Monitoring Settings**: Logging, metrics, health checks
 
 #### **Extension Configuration**
-- ✅ **mongodb_config_example.cfg**: Complete configuration template
+- ✅ **mongodb.cfg**: Complete configuration template
 - ✅ **Security Settings**: API authentication, SSL verification
 - ✅ **Performance Options**: Connection pooling, caching
 - ✅ **Feature Flags**: Enable/disable advanced features
@@ -184,7 +184,7 @@
 #### **Required Changes**
 1. **Update .env file**: Add security configuration variables
 2. **Configure API key**: Set SOURCEMOD_API_KEY in environment
-3. **Update extension config**: Use new mongodb_config_example.cfg
+3. **Update extension config**: Use new mongodb.cfg
 4. **Test security**: Run security test suite
 
 #### **Optional Enhancements**

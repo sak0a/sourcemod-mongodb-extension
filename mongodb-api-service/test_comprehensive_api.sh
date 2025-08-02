@@ -99,7 +99,7 @@ test_endpoint "GET" "$API_BASE/health" "" "Health check endpoint"
 echo -e "${BLUE}=== Test 2: Create MongoDB Connection ===${NC}"
 response=$(curl -s -X POST \
     -H "Content-Type: application/json" \
-    -d '{"uri": "mongodb://admin:83C.!gotJK%40Z8VJmbDZMxbCk%40kyHJA.R@37.114.54.74:27017/?authSource=admin"}' \
+    -d '{"uri": "mongodb://admin:your-password@192.168.1.100:27017/?authSource=admin"}' \
     "$API_V1/connections")
 
 echo "Response: $response"

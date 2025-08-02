@@ -5,7 +5,7 @@ A Node.js HTTP API service that bridges HTTP requests to MongoDB operations for 
 ## ✅ **Current Status: PRODUCTION READY**
 
 - ✅ **Compiled Service**: `dist/server.js` ready to run
-- ✅ **Real MongoDB Connection**: Connected to `37.114.54.74:27017`
+- ✅ **Real MongoDB Connection**: Connected to `192.168.1.100:27017`
 - ✅ **Authentication**: Admin credentials configured
 - ✅ **Container Support**: Runs on `0.0.0.0:3300` for external access
 - ✅ **Full API**: All MongoDB operations implemented
@@ -32,7 +32,7 @@ curl http://127.0.0.1:3300/
 # Test connection
 curl -X POST http://127.0.0.1:3300/api/v1/connections \
   -H "Content-Type: application/json" \
-  -d '{"uri":"mongodb://admin:***@37.114.54.74:27017/?authSource=admin"}'
+  -d '{"uri":"mongodb://admin:***@192.168.1.100:27017/?authSource=admin"}'
 ```
 
 ## 📋 **API Endpoints**
@@ -42,7 +42,7 @@ curl -X POST http://127.0.0.1:3300/api/v1/connections \
 # Create Connection
 POST /api/v1/connections
 {
-  "uri": "mongodb://admin:***@37.114.54.74:27017/?authSource=admin"
+  "uri": "mongodb://admin:***@192.168.1.100:27017/?authSource=admin"
 }
 # Response: {"success":true,"data":{"connectionId":"uuid"},"timestamp":"..."}
 
@@ -99,7 +99,7 @@ NODE_ENV=production          # Environment
 ```
 
 ### **MongoDB Configuration**
-- **Server**: `37.114.54.74:27017`
+- **Server**: `192.168.1.100:27017`
 - **Authentication**: Admin credentials
 - **Database**: `gamedb`
 - **Collections**: `players`, `connections`
@@ -216,7 +216,7 @@ npm test
 # Manual testing
 curl -X POST http://127.0.0.1:3300/api/v1/connections \
   -H "Content-Type: application/json" \
-  -d '{"uri":"mongodb://admin:***@37.114.54.74:27017/?authSource=admin"}'
+  -d '{"uri":"mongodb://admin:***@192.168.1.100:27017/?authSource=admin"}'
 ```
 
 ## 📈 **Performance**
@@ -482,7 +482,7 @@ mongo_count             # Verify operations
 ### **Database Testing**
 ```bash
 # Direct MongoDB testing
-mongo mongodb://admin:***@37.114.54.74:27017/gamedb --authenticationDatabase admin
+mongo mongodb://admin:***@192.168.1.100:27017/gamedb --authenticationDatabase admin
 > db.players.find().limit(5)
 > db.players.count()
 > db.connections.find().sort({timestamp:-1}).limit(10)
@@ -498,7 +498,7 @@ mongo mongodb://admin:***@37.114.54.74:27017/gamedb --authenticationDatabase adm
 netstat -tulpn | grep :3300
 
 # Check MongoDB connectivity
-telnet 37.114.54.74 27017
+telnet 192.168.1.100 27017
 
 # Check logs
 tail -f logs/error.log
@@ -510,8 +510,8 @@ tail -f logs/error.log
 export MONGODB_TIMEOUT=30000
 
 # Check network connectivity
-ping 37.114.54.74
-traceroute 37.114.54.74
+ping 192.168.1.100
+traceroute 192.168.1.100
 ```
 
 #### **Memory Issues**
