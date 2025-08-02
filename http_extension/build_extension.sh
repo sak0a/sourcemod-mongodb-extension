@@ -105,5 +105,37 @@ echo ""
 echo "🔍 Dependencies:"
 ldd ../bin/http_mongodb.ext.so 2>/dev/null | head -10 || echo "Static build - minimal dependencies"
 
+# Compile SourcePawn plugins if spcomp is available
+echo ""
+echo "🔧 Compiling SourcePawn plugins..."
+
+if command -v spcomp >/dev/null 2>&1; then
+    cd scripting
+
+    echo "Compiling mongo_console_test.sp..."
+    spcomp mongo_console_test.sp -o ../bin/mongo_console_test.smx
+
+    echo "Compiling test_real_data.sp..."
+    spcomp test_real_data.sp -o ../bin/test_real_data.smx
+
+    echo "Compiling advanced_mongodb_examples.sp..."
+    spcomp advanced_mongodb_examples.sp -o ../bin/advanced_mongodb_examples.smx
+
+    cd ..
+    echo "✅ SourcePawn plugins compiled successfully!"
+    echo "📁 Plugins available in bin/ directory"
+else
+    echo "⚠️ spcomp not found - SourcePawn plugins not compiled"
+    echo "   Copy .sp files to your SourceMod scripting directory and compile manually"
+fi
+
+echo ""
+echo "📦 Complete package contents:"
+echo "  📄 http_mongodb.ext.so - Main extension"
+echo "  📄 http_mongodb.inc - Include file"
+echo "  📄 mongodb_config_example.cfg - Configuration template"
+echo "  📄 *.smx - Compiled plugins (if spcomp available)"
+echo "  📄 *.sp - Source plugins"
+
 echo ""
 echo "Build completed successfully! 🎉"

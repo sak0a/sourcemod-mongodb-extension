@@ -190,10 +190,10 @@ router.post('/:connectionId/databases/:db/collections/:coll/documents/find',
 );
 
 /**
- * PUT /:connectionId/databases/:db/collections/:coll/documents/updateOne
- * Update a single document
+ * POST /:connectionId/databases/:db/collections/:coll/documents/updateOne
+ * Update a single document (using POST for consistency)
  */
-router.put('/:connectionId/databases/:db/collections/:coll/documents/updateOne',
+router.post('/:connectionId/databases/:db/collections/:coll/documents/updateOne',
   [...validateConnectionId, ...validateDbCollection],
   asyncHandler(async (req: Request, res: Response) => {
     const validationError = checkValidation(req, res);
@@ -240,10 +240,10 @@ router.put('/:connectionId/databases/:db/collections/:coll/documents/updateOne',
 );
 
 /**
- * PUT /:connectionId/databases/:db/collections/:coll/documents/updateMany
- * Update multiple documents
+ * POST /:connectionId/databases/:db/collections/:coll/documents/updateMany
+ * Update multiple documents (using POST for consistency)
  */
-router.put('/:connectionId/databases/:db/collections/:coll/documents/updateMany',
+router.post('/:connectionId/databases/:db/collections/:coll/documents/updateMany',
   [...validateConnectionId, ...validateDbCollection],
   asyncHandler(async (req: Request, res: Response) => {
     const validationError = checkValidation(req, res);
@@ -290,10 +290,10 @@ router.put('/:connectionId/databases/:db/collections/:coll/documents/updateMany'
 );
 
 /**
- * DELETE /:connectionId/databases/:db/collections/:coll/documents/deleteOne
- * Delete a single document
+ * POST /:connectionId/databases/:db/collections/:coll/documents/deleteOne
+ * Delete a single document (using POST to support request body)
  */
-router.delete('/:connectionId/databases/:db/collections/:coll/documents/deleteOne',
+router.post('/:connectionId/databases/:db/collections/:coll/documents/deleteOne',
   [...validateConnectionId, ...validateDbCollection],
   asyncHandler(async (req: Request, res: Response) => {
     const validationError = checkValidation(req, res);
@@ -336,10 +336,10 @@ router.delete('/:connectionId/databases/:db/collections/:coll/documents/deleteOn
 );
 
 /**
- * DELETE /:connectionId/databases/:db/collections/:coll/documents/deleteMany
- * Delete multiple documents
+ * POST /:connectionId/databases/:db/collections/:coll/documents/deleteMany
+ * Delete multiple documents (using POST to support request body)
  */
-router.delete('/:connectionId/databases/:db/collections/:coll/documents/deleteMany',
+router.post('/:connectionId/databases/:db/collections/:coll/documents/deleteMany',
   [...validateConnectionId, ...validateDbCollection],
   asyncHandler(async (req: Request, res: Response) => {
     const validationError = checkValidation(req, res);
@@ -416,6 +416,308 @@ router.post('/:connectionId/databases/:db/collections/:coll/documents/count',
         error instanceof Error ? error.message : 'Count operation failed',
         500,
         'COUNT_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * POST /:connectionId/databases/:db/collections/:coll/aggregate
+ * Run aggregation pipeline
+ */
+router.post('/:connectionId/databases/:db/collections/:coll/aggregate',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { pipeline = [], options = {} } = req.body;
+
+    logger.info('Running aggregation pipeline', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      pipelineStages: pipeline.length
+    });
+
+    try {
+      const cursor = collection.aggregate(pipeline, options);
+      const results = await cursor.toArray();
+
+      const response: ApiResponse<MongoDocument[]> = {
+        success: true,
+        data: results.map((doc: any) => ({ ...doc, _id: doc._id?.toString() })),
+        timestamp: new Date().toISOString(),
+      };
+
+      res.json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Aggregation operation failed',
+        500,
+        'AGGREGATION_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * POST /:connectionId/databases/:db/collections/:coll/documents/bulkWrite
+ * Execute bulk write operations
+ */
+router.post('/:connectionId/databases/:db/collections/:coll/documents/bulkWrite',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { operations = [], ordered = true } = req.body;
+
+    logger.info('Executing bulk write operations', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      operationCount: operations.length,
+      ordered
+    });
+
+    try {
+      const result = await collection.bulkWrite(operations, { ordered });
+
+      const response: ApiResponse<{
+        insertedCount: number;
+        matchedCount: number;
+        modifiedCount: number;
+        deletedCount: number;
+        upsertedCount: number;
+        insertedIds: { [key: number]: string };
+        upsertedIds: { [key: number]: string };
+      }> = {
+        success: true,
+        data: {
+          insertedCount: result.insertedCount,
+          matchedCount: result.matchedCount,
+          modifiedCount: result.modifiedCount,
+          deletedCount: result.deletedCount,
+          upsertedCount: result.upsertedCount,
+          insertedIds: Object.fromEntries(
+            Object.entries(result.insertedIds || {}).map(([k, v]) => [k, (v as any).toString()])
+          ),
+          upsertedIds: Object.fromEntries(
+            Object.entries(result.upsertedIds || {}).map(([k, v]) => [k, (v as any).toString()])
+          ),
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      res.json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Bulk write operation failed',
+        500,
+        'BULK_WRITE_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * POST /:connectionId/databases/:db/collections/:coll/documents/distinct
+ * Find distinct values for a field
+ */
+router.post('/:connectionId/databases/:db/collections/:coll/documents/distinct',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { field, filter = {} } = req.body;
+
+    if (!field) {
+      return res.status(400).json({
+        success: false,
+        error: 'Field parameter is required',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info('Finding distinct values', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      field,
+      filter
+    });
+
+    try {
+      const distinctValues = await collection.distinct(field, filter);
+
+      const response: ApiResponse<{ values: any[] }> = {
+        success: true,
+        data: { values: distinctValues },
+        timestamp: new Date().toISOString(),
+      };
+
+      return res.json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Distinct operation failed',
+        500,
+        'DISTINCT_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * POST /:connectionId/databases/:db/collections/:coll/indexes
+ * Create an index
+ */
+router.post('/:connectionId/databases/:db/collections/:coll/indexes',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { keys, options = {} } = req.body;
+
+    if (!keys) {
+      return res.status(400).json({
+        success: false,
+        error: 'Keys parameter is required',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info('Creating index', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      keys,
+      options
+    });
+
+    try {
+      const indexName = await collection.createIndex(keys, options);
+
+      const response: ApiResponse<{ name: string }> = {
+        success: true,
+        data: { name: indexName },
+        timestamp: new Date().toISOString(),
+      };
+
+      return res.json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Index creation failed',
+        500,
+        'INDEX_CREATE_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * DELETE /:connectionId/databases/:db/collections/:coll/indexes/:indexName
+ * Drop an index
+ */
+router.delete('/:connectionId/databases/:db/collections/:coll/indexes/:indexName',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { indexName } = req.params;
+
+    if (!indexName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Index name is required',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info('Dropping index', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      indexName
+    });
+
+    try {
+      await collection.dropIndex(indexName);
+
+      const response: ApiResponse<{ dropped: boolean }> = {
+        success: true,
+        data: { dropped: true },
+        timestamp: new Date().toISOString(),
+      };
+
+      return res.json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Index drop failed',
+        500,
+        'INDEX_DROP_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * POST /:connectionId/databases/:db/collections/:coll/documents/insertMany
+ * Insert multiple documents
+ */
+router.post('/:connectionId/databases/:db/collections/:coll/documents/insertMany',
+  [...validateConnectionId, ...validateDbCollection],
+  asyncHandler(async (req: Request, res: Response) => {
+    const validationError = checkValidation(req, res);
+    if (validationError) return;
+
+    const collection = getCollection(req);
+    const { documents, options = {} } = req.body;
+
+    if (!Array.isArray(documents) || documents.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Documents array is required and must not be empty',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    logger.info('Inserting multiple documents', {
+      connectionId: req.params['connectionId'],
+      database: req.params['db'],
+      collection: req.params['coll'],
+      documentCount: documents.length
+    });
+
+    try {
+      const result = await collection.insertMany(documents, options);
+
+      const response: ApiResponse<{
+        insertedCount: number;
+        insertedIds: string[];
+      }> = {
+        success: true,
+        data: {
+          insertedCount: result.insertedCount,
+          insertedIds: Object.values(result.insertedIds).map(id => (id as any).toString()),
+        },
+        timestamp: new Date().toISOString(),
+      };
+
+      return res.status(201).json(response);
+    } catch (error) {
+      throw createError(
+        error instanceof Error ? error.message : 'Insert many operation failed',
+        500,
+        'INSERT_MANY_FAILED'
       );
     }
   })

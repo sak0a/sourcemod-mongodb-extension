@@ -7,16 +7,25 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+
 import dotenv from 'dotenv';
 
 import { ConnectionManager } from './managers/ConnectionManager';
 import { connectionRoutes } from './routes/connectionRoutes';
 import { databaseRoutes } from './routes/databaseRoutes';
 import { batchRoutes } from './routes/batchRoutes';
-import { healthRoutes } from './routes/healthRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
+import { authenticateApiKey, verifySourceModExtension } from './middleware/auth';
+import {
+  createRateLimit,
+  createSlowDown,
+  validateRequestSize,
+  sanitizeInput,
+  enforceHttps,
+  securityHeaders,
+  securityLogger
+} from './middleware/security';
 import { logger } from './utils/logger';
 
 // Load environment variables
@@ -40,33 +49,51 @@ class MongoDBAPIServer {
   }
 
   private setupMiddleware(): void {
-    // Security middleware
+    // Trust proxy for accurate IP addresses
+    this.app.set('trust proxy', 1);
+
+    // HTTPS enforcement (production only)
+    this.app.use(enforceHttps());
+
+    // Security headers
+    this.app.use(securityHeaders());
+
+    // Enhanced security middleware
     this.app.use(helmet({
       contentSecurityPolicy: false, // Disable for API
       crossOriginEmbedderPolicy: false,
     }));
 
-    // CORS configuration
+    // CORS configuration with enhanced security
     this.app.use(cors({
-      origin: process.env['CORS_ORIGIN']?.split(',') || ['http://localhost:3000'],
+      origin: process.env['CORS_ORIGIN']?.split(',') || [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3300',
+        'http://127.0.0.1:3300'
+      ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-API-Key',
+        'X-SourceMod-API-Key',
+        'X-SourceMod-Extension',
+        'X-Extension-Version'
+      ],
     }));
 
-    // Rate limiting
-    const limiter = rateLimit({
-      windowMs: parseInt(process.env['RATE_LIMIT_WINDOW'] || '900000'), // 15 minutes
-      max: parseInt(process.env['RATE_LIMIT_MAX'] || '1000'), // limit each IP to 1000 requests per windowMs
-      message: {
-        success: false,
-        error: 'Too many requests from this IP, please try again later.',
-        timestamp: new Date().toISOString(),
-      },
-      standardHeaders: true,
-      legacyHeaders: false,
-    });
-    this.app.use('/api/', limiter);
+    // Enhanced rate limiting and slow down
+    this.app.use('/api/', createRateLimit());
+    this.app.use('/api/', createSlowDown());
+
+    // Request size validation
+    this.app.use(validateRequestSize());
+
+    // Security logging
+    this.app.use(securityLogger());
 
     // Body parsing and compression
     this.app.use(compression());
@@ -81,13 +108,44 @@ class MongoDBAPIServer {
   }
 
   private setupRoutes(): void {
-    // Health check endpoint
-    this.app.use('/health', healthRoutes);
+    // Basic health check endpoint (simple)
+    this.app.get('/health', (_req, res) => {
+      res.json({
+        success: true,
+        data: {
+          status: 'healthy',
+          uptime: process.uptime(),
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    });
 
-    // API routes
-    this.app.use('/api/v1/connections', connectionRoutes);
-    this.app.use('/api/v1/connections', databaseRoutes);
-    this.app.use('/api/v1/batch', batchRoutes);
+    // Input sanitization for all API routes
+    this.app.use('/api/', sanitizeInput());
+
+    // API routes with authentication and SourceMod verification
+    // Connection routes (require API key authentication + SourceMod verification)
+    this.app.use('/api/v1/connections',
+      verifySourceModExtension(),
+      authenticateApiKey({ required: true, permissions: ['read', 'write'] }),
+      connectionRoutes
+    );
+
+    // Database routes (require API key authentication + SourceMod verification)
+    this.app.use('/api/v1/connections',
+      verifySourceModExtension(),
+      authenticateApiKey({ required: true, permissions: ['read', 'write'] }),
+      databaseRoutes
+    );
+
+    // Batch routes (require API key authentication + SourceMod verification with write permissions)
+    this.app.use('/api/v1/batch',
+      verifySourceModExtension(),
+      authenticateApiKey({ required: true, permissions: ['write'] }),
+      batchRoutes
+    );
 
     // Root endpoint
     this.app.get('/', (_req, res) => {

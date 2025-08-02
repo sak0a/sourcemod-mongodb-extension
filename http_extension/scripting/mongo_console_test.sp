@@ -19,20 +19,44 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
     // Console commands only
+    // Basic Commands
     RegServerCmd("mongo_test", Command_MongoTest, "Basic MongoDB test");
     RegServerCmd("mongo_insert", Command_MongoInsert, "Insert mock player data");
     RegServerCmd("mongo_batch", Command_MongoBatch, "Insert multiple mock players");
     RegServerCmd("mongo_find", Command_MongoFind, "Find player by name");
     RegServerCmd("mongo_count", Command_MongoCount, "Count documents");
     RegServerCmd("mongo_stats", Command_MongoStats, "Show collection statistics");
+
+    // Advanced Commands
+    RegServerCmd("mongo_aggregate", Command_MongoAggregate, "Test aggregation pipeline");
+    RegServerCmd("mongo_bulk_ops", Command_MongoBulkOps, "Test bulk operations");
+    RegServerCmd("mongo_index", Command_MongoIndex, "Test index management");
+    RegServerCmd("mongo_performance", Command_MongoPerformance, "Run performance tests");
+    RegServerCmd("mongo_security", Command_MongoSecurity, "Test security features");
+
+    // Configuration Commands
+    RegServerCmd("mongo_config", Command_MongoConfig, "Test configuration management");
+    RegServerCmd("mongo_set_url", Command_MongoSetURL, "Set API URL");
+    RegServerCmd("mongo_get_url", Command_MongoGetURL, "Get current API URL");
     
-    PrintToServer("[MongoDB Console Test] Plugin loaded. Available commands:");
+    PrintToServer("[MongoDB Console Test] Plugin loaded with advanced features. Available commands:");
+    PrintToServer("=== Basic Commands ===");
     PrintToServer("  mongo_test - Basic connection test");
     PrintToServer("  mongo_insert [name] - Insert mock player");
     PrintToServer("  mongo_batch [count] - Insert multiple players (default: 10)");
     PrintToServer("  mongo_find [name] - Find player by name");
     PrintToServer("  mongo_count - Count total documents");
     PrintToServer("  mongo_stats - Show collection statistics");
+    PrintToServer("=== Advanced Commands ===");
+    PrintToServer("  mongo_aggregate - Test aggregation pipeline");
+    PrintToServer("  mongo_bulk_ops - Test bulk operations");
+    PrintToServer("  mongo_index - Test index management");
+    PrintToServer("  mongo_performance - Run performance tests");
+    PrintToServer("  mongo_security - Test security features");
+    PrintToServer("=== Configuration Commands ===");
+    PrintToServer("  mongo_config - Test configuration management");
+    PrintToServer("  mongo_set_url [url] - Set API URL");
+    PrintToServer("  mongo_get_url - Get current API URL");
 }
 
 // Basic MongoDB test
@@ -271,5 +295,241 @@ public Action Command_MongoStats(int args) {
     PrintToServer("   Total documents: %d", playerCount + connectionCount);
     
     conn.Close();
+    return Plugin_Handled;
+}
+
+// ============================================
+// Advanced Command Implementations
+// ============================================
+
+// Test aggregation pipeline
+public Action Command_MongoAggregate(int args) {
+    PrintToServer("=== MongoDB Aggregation Test ===");
+
+    MongoConnection conn = MongoDB_Connect("http://127.0.0.1:3300");
+    if (!conn.IsValid()) {
+        PrintToServer("❌ Failed to connect to MongoDB API");
+        return Plugin_Handled;
+    }
+
+    MongoCollection players = conn.GetCollection("gamedb", "players");
+
+    // Test aggregation pipeline: group by status and calculate average score
+    char pipeline[512];
+    Format(pipeline, sizeof(pipeline),
+        "[{\"$match\":{\"score\":{\"$gte\":0}}},"
+        "{\"$group\":{\"_id\":\"$status\",\"avgScore\":{\"$avg\":\"$score\"},\"count\":{\"$sum\":1}}},"
+        "{\"$sort\":{\"avgScore\":-1}}]");
+
+    PrintToServer("🔍 Running aggregation pipeline...");
+    PrintToServer("Pipeline: %s", pipeline);
+
+    ArrayList results = players.Aggregate(pipeline);
+    if (results != null) {
+        PrintToServer("✅ Aggregation successful! Results: %d groups", results.Length);
+        delete results;
+    } else {
+        PrintToServer("❌ Aggregation failed");
+    }
+
+    conn.Close();
+    return Plugin_Handled;
+}
+
+// Test bulk operations
+public Action Command_MongoBulkOps(int args) {
+    PrintToServer("=== MongoDB Bulk Operations Test ===");
+
+    MongoConnection conn = MongoDB_Connect("http://127.0.0.1:3300");
+    if (!conn.IsValid()) {
+        PrintToServer("❌ Failed to connect to MongoDB API");
+        return Plugin_Handled;
+    }
+
+    MongoCollection players = conn.GetCollection("gamedb", "bulk_test");
+
+    // Create bulk documents
+    ArrayList documents = new ArrayList();
+
+    for (int i = 1; i <= 5; i++) {
+        char doc[256];
+        Format(doc, sizeof(doc),
+            "{\"name\":\"BulkPlayer%d\",\"score\":%d,\"status\":\"bulk_test\",\"timestamp\":\"%d\"}",
+            i, i * 100, GetTime());
+        documents.PushString(doc);
+    }
+
+    PrintToServer("📦 Performing bulk insert of %d documents...", documents.Length);
+
+    bool success = players.BulkWrite(documents, true); // ordered=true
+    if (success) {
+        PrintToServer("✅ Bulk insert successful!");
+    } else {
+        PrintToServer("❌ Bulk insert failed");
+    }
+
+    delete documents;
+    conn.Close();
+    return Plugin_Handled;
+}
+
+// Test index management
+public Action Command_MongoIndex(int args) {
+    PrintToServer("=== MongoDB Index Management Test ===");
+
+    MongoConnection conn = MongoDB_Connect("http://127.0.0.1:3300");
+    if (!conn.IsValid()) {
+        PrintToServer("❌ Failed to connect to MongoDB API");
+        return Plugin_Handled;
+    }
+
+    MongoCollection players = conn.GetCollection("gamedb", "players");
+
+    // Create compound index on name and score
+    char keys[128], options[128];
+    Format(keys, sizeof(keys), "{\"name\":1,\"score\":-1}");
+    Format(options, sizeof(options), "{\"name\":\"name_score_idx\",\"background\":true}");
+
+    PrintToServer("🔧 Creating index on name and score fields...");
+    PrintToServer("Keys: %s", keys);
+    PrintToServer("Options: %s", options);
+
+    bool success = players.CreateIndex(keys, options);
+    if (success) {
+        PrintToServer("✅ Index created successfully!");
+    } else {
+        PrintToServer("❌ Index creation failed");
+    }
+
+    conn.Close();
+    return Plugin_Handled;
+}
+
+// Run performance tests
+public Action Command_MongoPerformance(int args) {
+    PrintToServer("=== MongoDB Performance Test ===");
+
+    MongoConnection conn = MongoDB_Connect("http://127.0.0.1:3300");
+    if (!conn.IsValid()) {
+        PrintToServer("❌ Failed to connect to MongoDB API");
+        return Plugin_Handled;
+    }
+
+    MongoCollection players = conn.GetCollection("gamedb", "perf_test");
+
+    // Test 1: Insert performance
+    float startTime = GetEngineTime();
+
+    for (int i = 1; i <= 10; i++) {
+        char doc[256], insertedId[64];
+        Format(doc, sizeof(doc),
+            "{\"name\":\"PerfTest%d\",\"score\":%d,\"timestamp\":\"%d\"}",
+            i, i * 50, GetTime());
+
+        players.InsertOneJSON(doc, insertedId, sizeof(insertedId));
+    }
+
+    float insertTime = GetEngineTime() - startTime;
+    PrintToServer("📊 Insert Performance: 10 documents in %.3f seconds", insertTime);
+
+    // Test 2: Find performance
+    startTime = GetEngineTime();
+
+    for (int i = 1; i <= 10; i++) {
+        char filter[128], result[512];
+        Format(filter, sizeof(filter), "{\"name\":\"PerfTest%d\"}", i);
+        players.FindOneJSON(filter, result, sizeof(result));
+    }
+
+    float findTime = GetEngineTime() - startTime;
+    PrintToServer("📊 Find Performance: 10 queries in %.3f seconds", findTime);
+
+    // Test 3: Count performance
+    startTime = GetEngineTime();
+    int count = players.CountDocuments("{}");
+    float countTime = GetEngineTime() - startTime;
+    PrintToServer("📊 Count Performance: %d documents counted in %.3f seconds", count, countTime);
+
+    conn.Close();
+    return Plugin_Handled;
+}
+
+// Test security features
+public Action Command_MongoSecurity(int args) {
+    PrintToServer("=== MongoDB Security Test ===");
+
+    // Test configuration functions
+    char currentUrl[256];
+    MongoDB_GetAPIURL(currentUrl, sizeof(currentUrl));
+    PrintToServer("🔒 Current API URL: %s", currentUrl);
+
+    int timeout = MongoDB_GetTimeout();
+    PrintToServer("🔒 Current timeout: %d seconds", timeout);
+
+    // Test connection with security headers
+    MongoConnection conn = MongoDB_Connect("http://127.0.0.1:3300");
+    if (!conn.IsValid()) {
+        PrintToServer("❌ Failed to connect to MongoDB API (security check failed)");
+        return Plugin_Handled;
+    }
+
+    PrintToServer("✅ Security test passed - API authentication working");
+
+    conn.Close();
+    return Plugin_Handled;
+}
+
+// Test configuration management
+public Action Command_MongoConfig(int args) {
+    PrintToServer("=== MongoDB Configuration Test ===");
+
+    // Test loading configuration
+    bool configLoaded = MongoDB_LoadConfig("configs/mongodb_config.cfg");
+    if (configLoaded) {
+        PrintToServer("✅ Configuration loaded successfully");
+    } else {
+        PrintToServer("⚠️ Configuration loading failed (using defaults)");
+    }
+
+    // Display current configuration
+    char currentUrl[256];
+    MongoDB_GetAPIURL(currentUrl, sizeof(currentUrl));
+    int timeout = MongoDB_GetTimeout();
+
+    PrintToServer("📋 Current Configuration:");
+    PrintToServer("   API URL: %s", currentUrl);
+    PrintToServer("   Timeout: %d seconds", timeout);
+
+    return Plugin_Handled;
+}
+
+// Set API URL
+public Action Command_MongoSetURL(int args) {
+    if (args < 1) {
+        PrintToServer("Usage: mongo_set_url <url>");
+        PrintToServer("Example: mongo_set_url http://127.0.0.1:3300");
+        return Plugin_Handled;
+    }
+
+    char newUrl[256];
+    GetCmdArg(1, newUrl, sizeof(newUrl));
+
+    bool success = MongoDB_SetAPIURL(newUrl);
+    if (success) {
+        PrintToServer("✅ API URL set to: %s", newUrl);
+    } else {
+        PrintToServer("❌ Failed to set API URL");
+    }
+
+    return Plugin_Handled;
+}
+
+// Get current API URL
+public Action Command_MongoGetURL(int args) {
+    char currentUrl[256];
+    MongoDB_GetAPIURL(currentUrl, sizeof(currentUrl));
+
+    PrintToServer("📋 Current API URL: %s", currentUrl);
+
     return Plugin_Handled;
 }

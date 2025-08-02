@@ -142,6 +142,86 @@ export interface BatchRequest {
   operations: BatchOperation[];
 }
 
+// Advanced operation types
+export interface AggregationRequest {
+  pipeline: MongoDocument[];
+  options?: {
+    allowDiskUse?: boolean;
+    maxTimeMS?: number;
+    batchSize?: number;
+  };
+}
+
+export interface BulkWriteRequest {
+  operations: BulkWriteOperation[];
+  ordered?: boolean;
+}
+
+export interface BulkWriteOperation {
+  insertOne?: { document: MongoDocument };
+  updateOne?: { filter: MongoDocument; update: MongoDocument; upsert?: boolean };
+  updateMany?: { filter: MongoDocument; update: MongoDocument; upsert?: boolean };
+  deleteOne?: { filter: MongoDocument };
+  deleteMany?: { filter: MongoDocument };
+  replaceOne?: { filter: MongoDocument; replacement: MongoDocument; upsert?: boolean };
+}
+
+export interface BulkWriteResult {
+  insertedCount: number;
+  matchedCount: number;
+  modifiedCount: number;
+  deletedCount: number;
+  upsertedCount: number;
+  insertedIds: { [key: number]: string };
+  upsertedIds: { [key: number]: string };
+}
+
+export interface DistinctRequest {
+  field: string;
+  filter?: MongoDocument;
+}
+
+export interface DistinctResult {
+  values: any[];
+}
+
+export interface FindWithProjectionRequest {
+  filter?: MongoDocument;
+  projection?: MongoDocument;
+  options?: FindOptions;
+}
+
+export interface IndexCreateRequest {
+  keys: MongoDocument;
+  options?: {
+    name?: string;
+    unique?: boolean;
+    sparse?: boolean;
+    background?: boolean;
+    expireAfterSeconds?: number;
+    partialFilterExpression?: MongoDocument;
+  };
+}
+
+export interface IndexDropRequest {
+  indexName: string;
+}
+
+// Health check types
+export interface HealthCheckResult {
+  status: 'healthy' | 'unhealthy';
+  connectionId: string;
+  latency?: number;
+  serverInfo?: {
+    uptime: number;
+    connections: any;
+    version: string;
+    host: string;
+  };
+  error?: string;
+  timestamp: string;
+}
+
 // Utility types
 export type ObjectIdString = string;
 
