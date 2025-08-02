@@ -3,9 +3,12 @@
  */
 
 #include "config_manager.h"
-#include <IKeyValues.h>
-#include <IFileSystem.h>
-#include <smsdk_ext.h>
+#include <fstream>
+#include <sstream>
+#include <cstring>
+#ifndef SOURCEMOD_BUILD
+#include <iostream>
+#endif
 
 ConfigManager::ConfigManager()
     : m_apiServiceURL("http://127.0.0.1:3300")
@@ -14,8 +17,6 @@ ConfigManager::ConfigManager()
     , m_retries(3)
     , m_debug(false)
     , m_defaultDatabase("sourcemod")
-    , m_playersCollection("players")
-    , m_connectionsCollection("servers")
     , m_maxConnections(5)
     , m_idleTimeout(300)
 {
@@ -27,73 +28,205 @@ ConfigManager::~ConfigManager()
 
 bool ConfigManager::LoadConfig(const char* configPath)
 {
-    IKeyValues* kv = new KeyValues("MongoDB Configuration");
-    if (!kv)
+    m_lastError = "";
+
+    // Set defaults first
+    m_apiServiceURL = "http://127.0.0.1:3300/api/v1";
+    m_apiKey = "sourcemod-mongodb-extension-2024";
+    m_timeout = 30000;
+    m_retries = 3;
+    m_debug = false;
+    m_defaultDatabase = "sourcemod";
+    m_maxConnections = 5;
+    m_idleTimeout = 300;
+
+    // Try to open and parse the JSON config file
+    std::ifstream file(configPath);
+    if (!file.is_open())
     {
-        m_lastError = "Failed to create KeyValues object";
-        return false;
-    }
-    
-    // Try to load the config file
-    if (!kv->LoadFromFile(filesystem, configPath))
-    {
-        m_lastError = "Failed to load config file: ";
+        m_lastError = "Failed to open configuration file: ";
         m_lastError += configPath;
-        kv->deleteThis();
         return false;
     }
-    
-    // Load API service settings
-    IKeyValues* apiService = kv->FindKey("api");
-    if (apiService)
+
+    // Read entire file into string
+    std::string jsonContent((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+    file.close();
+
+    // Parse JSON content
+    if (!ParseJSON(jsonContent))
     {
-        m_apiServiceURL = GetStringValue(apiService, "url", "http://127.0.0.1:3300");
-        m_apiKey = GetStringValue(apiService, "api_key", "sourcemod-mongodb-extension-2024");
-        m_timeout = GetIntValue(apiService, "timeout", 30) * 1000; // Convert seconds to milliseconds
-        m_retries = GetIntValue(apiService, "max_retries", 3);
-        m_debug = GetBoolValue(apiService, "debug_mode", false);
+        return false; // Error message set in ParseJSON
     }
 
-    // Load database settings
-    IKeyValues* database = kv->FindKey("database");
-    if (database)
-    {
-        m_defaultDatabase = GetStringValue(database, "default_db", "sourcemod");
-        m_playersCollection = GetStringValue(database, "players_collection", "players");
-        m_connectionsCollection = GetStringValue(database, "servers_collection", "servers");
-    }
-
-    // Load connection pool settings
-    IKeyValues* connections = kv->FindKey("connections");
-    if (connections)
-    {
-        m_maxConnections = GetIntValue(connections, "pool_size", 5);
-        m_idleTimeout = GetIntValue(connections, "keep_alive", 300);
-    }
-
-    // Load development settings (for debug mode)
-    IKeyValues* development = kv->FindKey("development");
-    if (development)
-    {
-        m_debug = GetBoolValue(development, "debug_mode", false);
-    }
-
-    kv->deleteThis();
     return true;
 }
 
-std::string ConfigManager::GetStringValue(IKeyValues* kv, const char* key, const char* defaultValue)
+bool ConfigManager::ParseJSON(const std::string& jsonContent)
 {
-    const char* value = kv->GetString(key, defaultValue);
-    return value ? std::string(value) : std::string(defaultValue);
+    try
+    {
+        // Simple JSON parser - look for key-value pairs in specific sections
+
+        // Parse API section
+        std::string apiSection = ExtractJSONSection(jsonContent, "api");
+        if (!apiSection.empty())
+        {
+            m_apiServiceURL = ExtractJSONString(apiSection, "url", m_apiServiceURL);
+            m_apiKey = ExtractJSONString(apiSection, "api_key", m_apiKey);
+            m_timeout = ExtractJSONInt(apiSection, "timeout", 30) * 1000; // Convert to milliseconds
+            m_retries = ExtractJSONInt(apiSection, "max_retries", 3);
+        }
+
+        // Parse database section
+        std::string dbSection = ExtractJSONSection(jsonContent, "database");
+        if (!dbSection.empty())
+        {
+            m_defaultDatabase = ExtractJSONString(dbSection, "default_db", m_defaultDatabase);
+        }
+
+        // Parse connections section
+        std::string connSection = ExtractJSONSection(jsonContent, "connections");
+        if (!connSection.empty())
+        {
+            m_maxConnections = ExtractJSONInt(connSection, "pool_size", 5);
+            m_idleTimeout = ExtractJSONInt(connSection, "keep_alive", 300);
+        }
+
+        // Parse development section
+        std::string devSection = ExtractJSONSection(jsonContent, "development");
+        if (!devSection.empty())
+        {
+            m_debug = ExtractJSONBool(devSection, "debug_mode", false);
+        }
+
+        return true;
+    }
+    catch (...)
+    {
+        m_lastError = "Failed to parse JSON configuration";
+        return false;
+    }
 }
 
-int ConfigManager::GetIntValue(IKeyValues* kv, const char* key, int defaultValue)
+std::string ConfigManager::ExtractJSONSection(const std::string& json, const std::string& sectionName)
 {
-    return kv->GetInt(key, defaultValue);
+    std::string searchKey = "\"" + sectionName + "\"";
+    size_t keyPos = json.find(searchKey);
+    if (keyPos == std::string::npos)
+        return "";
+
+    // Find the opening brace after the key
+    size_t bracePos = json.find('{', keyPos);
+    if (bracePos == std::string::npos)
+        return "";
+
+    // Find the matching closing brace
+    int braceCount = 1;
+    size_t pos = bracePos + 1;
+    while (pos < json.length() && braceCount > 0)
+    {
+        if (json[pos] == '{')
+            braceCount++;
+        else if (json[pos] == '}')
+            braceCount--;
+        pos++;
+    }
+
+    if (braceCount == 0)
+        return json.substr(bracePos + 1, pos - bracePos - 2);
+
+    return "";
 }
 
-bool ConfigManager::GetBoolValue(IKeyValues* kv, const char* key, bool defaultValue)
+std::string ConfigManager::ExtractJSONString(const std::string& section, const std::string& key, const std::string& defaultValue)
 {
-    return kv->GetInt(key, defaultValue ? 1 : 0) != 0;
+    std::string searchKey = "\"" + key + "\"";
+    size_t keyPos = section.find(searchKey);
+    if (keyPos == std::string::npos)
+        return defaultValue;
+
+    // Find the colon after the key
+    size_t colonPos = section.find(':', keyPos);
+    if (colonPos == std::string::npos)
+        return defaultValue;
+
+    // Find the opening quote of the value
+    size_t quotePos = section.find('"', colonPos);
+    if (quotePos == std::string::npos)
+        return defaultValue;
+
+    // Find the closing quote
+    size_t endQuotePos = section.find('"', quotePos + 1);
+    if (endQuotePos == std::string::npos)
+        return defaultValue;
+
+    return section.substr(quotePos + 1, endQuotePos - quotePos - 1);
 }
+
+int ConfigManager::ExtractJSONInt(const std::string& section, const std::string& key, int defaultValue)
+{
+    std::string searchKey = "\"" + key + "\"";
+    size_t keyPos = section.find(searchKey);
+    if (keyPos == std::string::npos)
+        return defaultValue;
+
+    // Find the colon after the key
+    size_t colonPos = section.find(':', keyPos);
+    if (colonPos == std::string::npos)
+        return defaultValue;
+
+    // Find the number after the colon
+    size_t numStart = colonPos + 1;
+    while (numStart < section.length() && (section[numStart] == ' ' || section[numStart] == '\t'))
+        numStart++;
+
+    if (numStart >= section.length())
+        return defaultValue;
+
+    // Extract the number
+    size_t numEnd = numStart;
+    while (numEnd < section.length() && (std::isdigit(section[numEnd]) || section[numEnd] == '-'))
+        numEnd++;
+
+    if (numEnd > numStart)
+    {
+        try
+        {
+            return std::stoi(section.substr(numStart, numEnd - numStart));
+        }
+        catch (...)
+        {
+            return defaultValue;
+        }
+    }
+
+    return defaultValue;
+}
+
+bool ConfigManager::ExtractJSONBool(const std::string& section, const std::string& key, bool defaultValue)
+{
+    std::string searchKey = "\"" + key + "\"";
+    size_t keyPos = section.find(searchKey);
+    if (keyPos == std::string::npos)
+        return defaultValue;
+
+    // Find the colon after the key
+    size_t colonPos = section.find(':', keyPos);
+    if (colonPos == std::string::npos)
+        return defaultValue;
+
+    // Look for true/false after the colon
+    size_t truePos = section.find("true", colonPos);
+    size_t falsePos = section.find("false", colonPos);
+
+    if (truePos != std::string::npos && (falsePos == std::string::npos || truePos < falsePos))
+        return true;
+    else if (falsePos != std::string::npos)
+        return false;
+
+    return defaultValue;
+}
+
+

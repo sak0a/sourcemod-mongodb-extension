@@ -8,7 +8,11 @@
 
 #include <string>
 #include <map>
-#include <IKeyValues.h>
+
+// Only include SourceMod headers when building as extension
+#ifdef SOURCEMOD_BUILD
+#include "smsdk_ext.h"
+#endif
 
 class ConfigManager
 {
@@ -27,8 +31,6 @@ public:
     bool IsDebugEnabled() const { return m_debug; }
     
     std::string GetDefaultDatabase() const { return m_defaultDatabase; }
-    std::string GetPlayersCollection() const { return m_playersCollection; }
-    std::string GetConnectionsCollection() const { return m_connectionsCollection; }
     
     int GetMaxConnections() const { return m_maxConnections; }
     int GetIdleTimeout() const { return m_idleTimeout; }
@@ -52,18 +54,18 @@ private:
     bool m_debug;
     
     std::string m_defaultDatabase;
-    std::string m_playersCollection;
-    std::string m_connectionsCollection;
     
     int m_maxConnections;
     int m_idleTimeout;
     
     std::string m_lastError;
-    
-    // Helper methods
-    std::string GetStringValue(IKeyValues* kv, const char* key, const char* defaultValue);
-    int GetIntValue(IKeyValues* kv, const char* key, int defaultValue);
-    bool GetBoolValue(IKeyValues* kv, const char* key, bool defaultValue);
+
+    // Helper methods for JSON parsing
+    bool ParseJSON(const std::string& jsonContent);
+    std::string ExtractJSONSection(const std::string& json, const std::string& sectionName);
+    std::string ExtractJSONString(const std::string& section, const std::string& key, const std::string& defaultValue);
+    int ExtractJSONInt(const std::string& section, const std::string& key, int defaultValue);
+    bool ExtractJSONBool(const std::string& section, const std::string& key, bool defaultValue);
 };
 
 #endif // _CONFIG_MANAGER_H_

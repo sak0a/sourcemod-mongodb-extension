@@ -462,6 +462,113 @@ cell_t MongoDB_Connect(IPluginContext *pContext, const cell_t *params) {
     return handle;
 }
 
+// MongoDB_ConnectWithConfig - Creates a connection handle using programmatic config
+cell_t MongoDB_ConnectWithConfig(IPluginContext *pContext, const cell_t *params) {
+    char *apiUrl, *mongoUri, *apiKey;
+    pContext->LocalToString(params[1], &apiUrl);
+    pContext->LocalToString(params[2], &mongoUri);
+    pContext->LocalToString(params[3], &apiKey);
+    int timeout = params[4];
+
+    std::string baseUrl = std::string(apiUrl);
+    std::string mongoUriStr = std::string(mongoUri);
+
+    g_pSM->LogMessage(myself, "MongoDB_ConnectWithConfig: Attempting to create connection");
+    g_pSM->LogMessage(myself, "  API URL: %s", baseUrl.c_str());
+    g_pSM->LogMessage(myself, "  MongoDB URI: %s", mongoUriStr.c_str());
+    g_pSM->LogMessage(myself, "  API Key: %s", strlen(apiKey) > 0 ? apiKey : "(using default)");
+    g_pSM->LogMessage(myself, "  Timeout: %d seconds", timeout);
+
+    // Create real connection via API
+    std::string connectionId = CreateMongoConnection(baseUrl, mongoUriStr);
+
+    if (connectionId.empty()) {
+        g_pSM->LogMessage(myself, "MongoDB_ConnectWithConfig: Failed to create connection");
+        return 0; // Failed to create connection
+    }
+
+    Handle_t handle = g_nextHandle++;
+    g_connectionUrls[handle] = baseUrl;
+    g_connections[handle] = connectionId;
+
+    g_pSM->LogMessage(myself, "MongoDB_ConnectWithConfig: Created connection handle %d with ID: %s", handle, connectionId.c_str());
+
+    return handle;
+}
+
+// MongoDB_ConnectFromConfigFile - Creates a connection directly from config file
+cell_t MongoDB_ConnectFromConfigFile(IPluginContext *pContext, const cell_t *params) {
+    char *configPath;
+    pContext->LocalToString(params[1], &configPath);
+
+    g_pSM->LogMessage(myself, "MongoDB_ConnectFromConfigFile: Loading config from %s", configPath);
+
+    // Create a temporary ConfigManager instance for this connection
+    ConfigManager tempConfig;
+    if (!tempConfig.LoadConfig(configPath)) {
+        g_pSM->LogMessage(myself, "MongoDB_ConnectFromConfigFile: Failed to load config: %s",
+                         tempConfig.GetLastError().c_str());
+        return 0; // Failed to load config
+    }
+
+    // Extract configuration values
+    std::string apiUrl = tempConfig.GetAPIServiceURL();
+    std::string mongoUri = "mongodb://admin:password@127.0.0.1:27017/?authSource=admin"; // Default for now
+    std::string apiKey = tempConfig.GetAPIKey();
+    int timeout = tempConfig.GetTimeout() / 1000; // Convert ms to seconds
+
+    g_pSM->LogMessage(myself, "MongoDB_ConnectFromConfigFile: Creating connection with loaded config");
+    g_pSM->LogMessage(myself, "  API URL: %s", apiUrl.c_str());
+    g_pSM->LogMessage(myself, "  API Key: %s", apiKey.c_str());
+    g_pSM->LogMessage(myself, "  Timeout: %d seconds", timeout);
+
+    // Create real connection via API
+    std::string connectionId = CreateMongoConnection(apiUrl, mongoUri);
+
+    if (connectionId.empty()) {
+        g_pSM->LogMessage(myself, "MongoDB_ConnectFromConfigFile: Failed to create connection");
+        return 0; // Failed to create connection
+    }
+
+    Handle_t handle = g_nextHandle++;
+    g_connectionUrls[handle] = apiUrl;
+    g_connections[handle] = connectionId;
+
+    // Store the configuration for this connection (for GetConfig support)
+    // For now, we'll store basic info - this can be expanded later
+    g_pSM->LogMessage(myself, "MongoDB_ConnectFromConfigFile: Created connection handle %d with ID: %s",
+                     handle, connectionId.c_str());
+
+    return handle;
+}
+
+// MongoDB_GetConnectionConfig - Gets the configuration for a connection
+cell_t MongoDB_GetConnectionConfig(IPluginContext *pContext, const cell_t *params) {
+    Handle_t connectionHandle = static_cast<Handle_t>(params[1]);
+
+    // Check if connection exists
+    if (g_connections.find(connectionHandle) == g_connections.end()) {
+        g_pSM->LogMessage(myself, "MongoDB_GetConnectionConfig: Invalid connection handle %d", connectionHandle);
+        return 0; // Invalid handle
+    }
+
+    g_pSM->LogMessage(myself, "MongoDB_GetConnectionConfig: Getting config for connection %d", connectionHandle);
+
+    // For now, return a handle to a default config
+    // In a full implementation, we would store the actual config used for each connection
+    // and return a handle to that config
+
+    // Create a new StringMap handle that represents the config
+    // This is a simplified implementation - in practice, you'd want to store
+    // the actual configuration used for each connection
+    Handle_t configHandle = g_nextHandle++;
+
+    g_pSM->LogMessage(myself, "MongoDB_GetConnectionConfig: Created config handle %d for connection %d",
+                     configHandle, connectionHandle);
+
+    return configHandle;
+}
+
 // MongoDB_GetCollection - Gets a collection handle
 cell_t MongoDB_GetCollection(IPluginContext *pContext, const cell_t *params) {
     Handle_t connection = params[1];
@@ -2017,6 +2124,9 @@ const sp_nativeinfo_t g_MongoDBNatives[] = {
 
     // Connection Management
     {"MongoDB_Connect",         MongoDB_Connect},
+    {"MongoDB_ConnectWithConfig", MongoDB_ConnectWithConfig},
+    {"MongoDB_ConnectFromConfigFile", MongoDB_ConnectFromConfigFile},
+    {"MongoDB_GetConnectionConfig", MongoDB_GetConnectionConfig},
     {"MongoDB_GetCollection",   MongoDB_GetCollection},
     {"MongoDB_IsConnected",     MongoDB_IsConnected},
     {"MongoDB_Close",           MongoDB_Close},

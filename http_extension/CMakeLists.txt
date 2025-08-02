@@ -56,6 +56,7 @@ include_directories(
 # Source files
 set(SOURCES
     complete_extension.cpp
+    config_manager.cpp
     /root/sourcemod-workspace/sourcemod/public/smsdk_ext.cpp
 )
 
@@ -63,6 +64,7 @@ set(SOURCES
 set(HEADERS
     extension.h
     smsdk_config.h
+    config_manager.h
 )
 
 # Create the extension library

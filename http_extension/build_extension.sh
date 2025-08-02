@@ -133,7 +133,7 @@ echo ""
 echo "📦 Complete package contents:"
 echo "  📄 http_mongodb.ext.so - Main extension"
 echo "  📄 http_mongodb.inc - Include file"
-echo "  📄 mongodb.cfg - Configuration file"
+echo "  📄 mongodb.json - JSON Configuration file"
 echo "  📄 *.smx - Compiled plugins (if spcomp available)"
 echo "  📄 *.sp - Source plugins"
 

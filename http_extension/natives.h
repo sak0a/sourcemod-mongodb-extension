@@ -15,6 +15,9 @@ using namespace SourceMod;
 
 // MongoDB Connection Natives
 cell_t MongoDB_Connect(IPluginContext *pContext, const cell_t *params);
+cell_t MongoDB_ConnectWithConfig(IPluginContext *pContext, const cell_t *params);
+cell_t MongoDB_ConnectFromConfigFile(IPluginContext *pContext, const cell_t *params);
+cell_t MongoDB_GetConnectionConfig(IPluginContext *pContext, const cell_t *params);
 cell_t MongoDB_Close(IPluginContext *pContext, const cell_t *params);
 cell_t MongoDB_IsConnected(IPluginContext *pContext, const cell_t *params);
 cell_t MongoDB_Ping(IPluginContext *pContext, const cell_t *params);

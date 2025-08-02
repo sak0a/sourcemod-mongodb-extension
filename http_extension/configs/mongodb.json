@@ -1,0 +1,382 @@
+{
+  "_comment": [
+    "================================================================================",
+    "MongoDB HTTP Extension - Configuration File",
+    "================================================================================",
+    "This file contains all configuration options for the MongoDB HTTP Extension.",
+    "",
+    "File Location: addons/sourcemod/configs/mongodb.json",
+    "Version: 1.0.0",
+    "Last Updated: 2025-08-02",
+    "Format: JSON with documentation comments (keys starting with '_' are ignored)",
+    "",
+    "Instructions:",
+    "1. Copy this file to your SourceMod configs directory",
+    "2. Customize the settings below for your environment",
+    "3. Restart SourceMod or reload the MongoDB extension",
+    "4. Test the configuration using the provided test commands",
+    "",
+    "Quick Start:",
+    "- Change 'api.url' to point to your MongoDB API service",
+    "- Update 'api.api_key' with a secure random string",
+    "- Modify 'connections.default_uri' with your MongoDB connection details",
+    "- Set 'development.debug_mode' to true for initial testing"
+  ],
+
+  "api": {
+    "_comment": [
+      "============================================",
+      "API Service Configuration",
+      "============================================",
+      "Settings for the HTTP API service that handles MongoDB operations"
+    ],
+
+    "url": "http://127.0.0.1:3300/api/v1",
+    "_url_comment": [
+      "MongoDB API service URL (required)",
+      "Change this to your API server address",
+      "Examples:",
+      "  - http://127.0.0.1:3300/api/v1",
+      "  - http://192.168.1.100:3300/api/v1",
+      "  - https://mongodb-api.yourserver.com/api/v1"
+    ],
+
+    "api_key": "sourcemod-mongodb-extension-2025",
+    "_api_key_comment": [
+      "API authentication key (required for security)",
+      "Change this to a secure random string",
+      "IMPORTANT: Keep this secret! Anyone with this key can access your MongoDB through the API"
+    ],
+
+    "timeout": 30,
+    "_timeout_comment": [
+      "Request timeout in seconds (default: 30, range: 5-300)",
+      "Increase for slow networks or complex operations",
+      "Decrease for faster failure detection"
+    ],
+
+    "max_retries": 3,
+    "_max_retries_comment": [
+      "Maximum retries for failed requests (default: 3, range: 0-10)",
+      "Higher values provide better reliability but may cause delays on persistent failures"
+    ],
+
+    "retry_delay": 1000,
+    "_retry_delay_comment": [
+      "Retry delay in milliseconds (default: 1000, range: 100-10000)",
+      "Time to wait between retry attempts - exponential backoff is applied automatically"
+    ],
+
+    "compression": true,
+    "_compression_comment": [
+      "Enable HTTP compression (default: true)",
+      "Reduces bandwidth usage",
+      "Disable only if your API server doesn't support compression"
+    ],
+
+    "user_agent": "SourceMod-MongoDB-Extension/1.0",
+    "_user_agent_comment": [
+      "HTTP User-Agent header for API requests",
+      "Helps identify requests in server logs"
+    ]
+  },
+  
+  "security": {
+    "_comment": [
+      "============================================",
+      "Security and Authentication Settings",
+      "============================================",
+      "Configure security features for API communication"
+    ],
+
+    "verify_ssl": false,
+    "_verify_ssl_comment": [
+      "Verify SSL certificates (default: false for development)",
+      "Set to true in production with valid SSL certificates",
+      "SECURITY: Always enable SSL verification in production!"
+    ],
+
+    "ssl_cert_path": "",
+    "_ssl_cert_path_comment": [
+      "Path to custom SSL certificate bundle (optional)",
+      "Example: /path/to/ca-certificates.crt"
+    ],
+
+    "sign_requests": false,
+    "_sign_requests_comment": [
+      "Enable request signing for additional security (default: false)",
+      "Requires compatible API server implementation"
+    ],
+
+    "allowed_ips": ["127.0.0.1", "::1"],
+    "_allowed_ips_comment": [
+      "List of allowed IP addresses for API access (whitelist)",
+      "Add your server IPs here. Empty array allows all IPs",
+      "Examples: 192.168.1.0/24, 10.0.0.0/8, 172.16.0.0/12"
+    ],
+
+    "rate_limiting": true,
+    "_rate_limiting_comment": [
+      "Enable rate limiting protection (default: true)",
+      "Helps prevent abuse and ensures fair resource usage"
+    ]
+  },
+  
+  "connections": {
+    "_comment": [
+      "============================================",
+      "MongoDB Connection Settings",
+      "============================================",
+      "Configure how the API service connects to MongoDB"
+    ],
+
+    "default_uri": "mongodb://admin:password@127.0.0.1:27017/?authSource=admin",
+    "_default_uri_comment": [
+      "MongoDB connection string (required)",
+      "Change username, password, host, and port as needed",
+      "Examples:",
+      "  - mongodb://user:pass@localhost:27017/dbname",
+      "  - mongodb://user:pass@host1:27017,host2:27017/dbname?replicaSet=rs0",
+      "  - mongodb+srv://user:pass@cluster.mongodb.net/dbname",
+      "SECURITY: Never commit real credentials to version control!"
+    ],
+
+    "pool_size": 5,
+    "_pool_size_comment": [
+      "Connection pool size (default: 5, range: 1-100)",
+      "Higher values allow more concurrent operations but use more resources"
+    ],
+
+    "connect_timeout": 30,
+    "_connect_timeout_comment": [
+      "Connection timeout in seconds (default: 30)",
+      "Time to wait when establishing initial connection to MongoDB"
+    ],
+
+    "socket_timeout": 30,
+    "_socket_timeout_comment": [
+      "Socket timeout in seconds (default: 30)",
+      "Time to wait for individual operations to complete"
+    ],
+
+    "pooling": true,
+    "_pooling_comment": [
+      "Enable connection pooling (default: true)",
+      "Improves performance by reusing connections. Disable only for debugging"
+    ],
+
+    "keep_alive": 300,
+    "_keep_alive_comment": [
+      "Connection keep-alive time in seconds (default: 300)",
+      "How long to keep idle connections open. 0 = no keep-alive"
+    ],
+
+    "auto_reconnect": true,
+    "_auto_reconnect_comment": [
+      "Automatically reconnect on connection loss (default: true)",
+      "Essential for production environments with network instability"
+    ],
+
+    "max_reconnects": 5,
+    "_max_reconnects_comment": [
+      "Maximum reconnection attempts (default: 5, range: 0-50)",
+      "Number of times to retry connection before giving up"
+    ]
+  },
+  
+  "database": {
+    "_comment": [
+      "============================================",
+      "Database Settings",
+      "============================================",
+      "Configure default database and creation behavior"
+    ],
+
+    "default_db": "sourcemod",
+    "_default_db_comment": [
+      "Default database name (default: 'sourcemod')",
+      "This database will be used when no specific database is specified",
+      "Examples: gameserver, csgo_stats, tf2_data"
+    ],
+
+    "auto_create_db": true,
+    "_auto_create_db_comment": [
+      "Automatically create databases if they don't exist (default: true)",
+      "Convenient for development, consider disabling in production"
+    ],
+
+    "write_concern": "majority",
+    "_write_concern_comment": [
+      "MongoDB write concern (default: 'majority')",
+      "Options: 'majority', 'acknowledged', 'unacknowledged', or number",
+      "Higher concerns provide better durability but may be slower"
+    ],
+
+    "read_preference": "primary",
+    "_read_preference_comment": [
+      "MongoDB read preference (default: 'primary')",
+      "Options: 'primary', 'primaryPreferred', 'secondary', 'secondaryPreferred', 'nearest'",
+      "Affects which replica set members are used for read operations"
+    ]
+  },
+  
+  "performance": {
+    "_comment": [
+      "============================================",
+      "Performance and Optimization Settings",
+      "============================================",
+      "Configure performance tuning and optimization features"
+    ],
+
+    "enable_caching": true,
+    "_enable_caching_comment": [
+      "Enable result caching (default: true)",
+      "Improves performance by caching frequently accessed data",
+      "Disable if you need real-time data consistency"
+    ],
+
+    "cache_ttl": 300,
+    "_cache_ttl_comment": [
+      "Cache time-to-live in seconds (default: 300 = 5 minutes)",
+      "How long cached results remain valid",
+      "Lower = more current data, higher = better performance"
+    ],
+
+    "batch_size": 100,
+    "_batch_size_comment": [
+      "Default batch size for bulk operations (default: 100, range: 1-1000)",
+      "Larger batches are more efficient but use more memory"
+    ],
+
+    "max_query_time": 30,
+    "_max_query_time_comment": [
+      "Maximum query execution time in seconds (default: 30)",
+      "Queries exceeding this time will be terminated to prevent server overload"
+    ],
+
+    "enable_profiling": false,
+    "_enable_profiling_comment": [
+      "Enable MongoDB profiling (default: false)",
+      "Useful for debugging slow queries. May impact performance when enabled",
+      "Only enable during development or troubleshooting"
+    ],
+
+    "slow_query_threshold": 1000,
+    "_slow_query_threshold_comment": [
+      "Slow query threshold in milliseconds (default: 1000)",
+      "Queries slower than this will be logged for optimization"
+    ]
+  },
+  
+  "logging": {
+    "_comment": [
+      "============================================",
+      "Logging Configuration",
+      "============================================",
+      "Configure what and how much information to log"
+    ],
+
+    "log_level": "info",
+    "_log_level_comment": [
+      "Logging level (default: 'info')",
+      "Options: error, warn, info, debug, trace",
+      "Higher levels include lower levels (debug includes info, warn, error)",
+      "Use 'info' for production, 'debug' for troubleshooting"
+    ],
+
+    "log_queries": false,
+    "_log_queries_comment": [
+      "Log all MongoDB queries (default: false)",
+      "Useful for debugging but can generate large log files",
+      "WARNING: May log sensitive data - use carefully in production"
+    ],
+
+    "log_errors": true,
+    "_log_errors_comment": [
+      "Log error messages (default: true)",
+      "Essential for troubleshooting. Recommended to always keep enabled"
+    ],
+
+    "log_performance": false,
+    "_log_performance_comment": [
+      "Log performance metrics (default: false)",
+      "Logs query execution times and performance statistics",
+      "Enable when optimizing database performance"
+    ],
+
+    "max_log_size": "10MB",
+    "_max_log_size_comment": [
+      "Maximum log file size before rotation (default: '10MB')",
+      "Formats: 1KB, 1MB, 1GB, 100MB",
+      "Prevents log files from consuming too much disk space"
+    ],
+
+    "log_rotation": true,
+    "_log_rotation_comment": [
+      "Enable log file rotation (default: true)",
+      "Creates new log files when size limit is reached, keeps old logs as backups"
+    ]
+  },
+  
+  "development": {
+    "_comment": [
+      "============================================",
+      "Development and Debug Settings",
+      "============================================",
+      "Settings for development, testing, and debugging",
+      "IMPORTANT: Disable all development features in production!"
+    ],
+
+    "debug_mode": false,
+    "_debug_mode_comment": [
+      "Enable debug mode (default: false)",
+      "Enables detailed logging and debug information",
+      "Effects: Verbose error messages, detailed query logging, performance timing, stack traces",
+      "WARNING: Never enable in production - may expose sensitive information"
+    ],
+
+    "verbose_logging": false,
+    "_verbose_logging_comment": [
+      "Enable verbose logging (default: false)",
+      "Logs additional details about operations and internal state",
+      "Can significantly increase log file sizes"
+    ],
+
+    "enable_test_endpoints": false,
+    "_enable_test_endpoints_comment": [
+      "Enable test/debug API endpoints (default: false)",
+      "Provides additional endpoints for testing and diagnostics",
+      "SECURITY RISK: Never enable in production environments"
+    ],
+
+    "mock_responses": false,
+    "_mock_responses_comment": [
+      "Use mock responses instead of real MongoDB (default: false)",
+      "Useful for testing without a MongoDB instance",
+      "Enable for unit testing or development without database"
+    ],
+
+    "development_server": false,
+    "_development_server_comment": [
+      "Mark this as a development server (default: false)",
+      "Enables additional development features and relaxed security",
+      "Effects: Relaxed SSL verification, additional debug endpoints, extended timeouts"
+    ]
+  },
+
+  "_footer": [
+    "============================================",
+    "Configuration Notes",
+    "============================================",
+    "- This configuration file uses JSON format for easy parsing and validation",
+    "- Comments starting with '_' are ignored by the parser but provide documentation",
+    "- Always restart the SourceMod extension after changing this configuration",
+    "- Validate JSON syntax before deploying to prevent parsing errors",
+    "- Keep sensitive information (passwords, API keys) secure and out of version control",
+    "",
+    "Support Information:",
+    "- Documentation: https://github.com/sourcemod/mongodb-extension/wiki",
+    "- Issues: https://github.com/sourcemod/mongodb-extension/issues",
+    "- Version: 1.0.0"
+  ]
+}
