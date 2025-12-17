@@ -1,3 +1,5 @@
+# Discontinued as of 17.12.2025 due to relevance
+
 # MongoDB SourceMod Extension
 
 **Enterprise-grade MongoDB integration for SourceMod with comprehensive security and advanced features.**
